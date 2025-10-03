@@ -1,0 +1,17 @@
+<section>
+    <div>
+        <form (ngSubmit)="login()">
+            <div>
+                <label>Username: </label>
+                <input type="text" placeholder="username" name="username" [(ngModel)]="user.username" required>
+            </div>
+            <div>
+                <label>password: </label>
+                <input type="password" placeholder="password" name="password" [(ngModel)]="user.password" required>
+            </div>
+            <div>
+                <button type="submit">Login</button>
+            </div>
+        </form>
+    </div>
+</section>

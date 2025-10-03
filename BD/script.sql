@@ -23,6 +23,8 @@ create table cuenta(
     foreign key(usuario_id) references usuarios(id)
 );
 
+select * from usuarios;
+
 create table movimiento (
 	id int auto_increment primary key,
     cuenta_id int not null,

@@ -1,16 +1,16 @@
 const express = require('express');
 const cors = require('cors');
+const bcryptjs = require('bcryptjs')
+const jwt = require('jsonwebtoken')
 
 const app = express();
 const db = require('./database/connection');
 const connection = require('./database/connection');
 
-const PORT = process.env.PORT || 3000;
+const PORT = 3000;
 
 app.use(cors());
 app.use(express.json());
-
-
 
 app.listen(PORT, () => {
     console.log(`Server is running on http://localhost:${PORT}`);
@@ -27,3 +27,58 @@ app.listen(PORT, () => {
     })
 });
 
+app.post('/register', async (req, res) => {
+    const {nombre, apellido, username, password, phone, email} = req.body
+
+    try {
+        const password_hash = await bcryptjs.hash(password, 10); // encriptar contrasena
+
+        // Validar si el username ya se encuentra registrado
+        const [user] = await db.promise().query('SELECT * FROM usuarios WHERE username = ?', [username])
+        if(user.length>0) return res.status(400).json({message: 'Usuario ya existe'})
+
+        db.query('INSERT INTO usuarios (nombre, apellido, username, password, phone, email) values (?,?,?,?,?,?)',
+            [nombre, apellido, username, password_hash, phone, email], 
+            (err, result) => {
+                if (err) {
+                    console.log(err.message)
+                    return res.status(400).json({message: 'Error al crear usuario'})
+                }
+                return res.status(200).json({message: "Usuario creado", user: {id: result.insertId, username}})
+            }
+        )
+
+        res.status(200).json({message: 'Usuario registrado'})
+
+    } catch (error) {
+        console.error('ERROR al registrar usuario')
+        res.status(500).json({message: 'Error al registrar usuario'})
+    }
+})
+
+app.post('/login', async (req, res) => {
+    const {username, password} = req.body
+
+    try {
+
+        const [user] = await db.promise().query('SELECT * FROM usuarios WHERE username = ?', [username]);
+        const usuario = user[0];
+
+        if(!usuario) return res.status(400).json({message: 'Usuario no existe'})
+
+        const password_valido = await bcryptjs.compare(password, usuario.password);
+
+        if(!password_valido) return res.status(400).json({message: 'Credenciales invalidas'});
+
+        const token = jwt.sign(
+            {id: usuario.id, username: usuario.username, nombre: usuario.nombre, apellido: usuario.apellido},
+            'private_key', { expiresIn: '1h' }
+        );
+
+        return res.status(200).json({message: "Inicio de sesion exitosa", user: usuario, token: token})
+        
+    } catch (error) {
+        console.error('Error en el login ', error.message);
+        res.status(500).json({message: 'Error en el login'})
+    }
+})
